@@ -1,2 +1,2 @@
 # AirHockeyTrainer
-Training simulator for Reinforcement Learning agents
+Training simulator for reinforcement learning agents
