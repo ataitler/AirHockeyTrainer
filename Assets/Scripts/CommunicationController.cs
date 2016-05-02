@@ -26,14 +26,12 @@ public class CommunicationController : MonoBehaviour {
 
 		// create a TCP socket
 		connection = new Socket (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-		allDone.Reset ();
 
 		// bind the socket to the end point and listen for incoming connections
 		try {
 			connection.Bind(localendPoint);
 			connection.Listen(100);
 			connection.BeginAccept(new AsyncCallback(AcceptCallback), connection);
-			//allDone.WaitOne();
 		}
 		catch (Exception) {
 			Debug.Log("Couldn't setup the TCP listner");
@@ -41,9 +39,14 @@ public class CommunicationController : MonoBehaviour {
 	}
 
 	void FixedUpdate () {
-		if (gameManager.State == TrainerState.Trainning) {
+		if (IsConnected(connection)) {
+			gameManager.UpdateState(TrainerState.Disconnected);
+		}
 
-			string reward = rewardManager.GetReward ().ToString ();
+
+		if (gameManager.State == TrainerState.Training) {
+
+			/*string reward = rewardManager.GetReward ().ToString ();
 			string puckData = puck.rigidbody2D.position.x.ToString () + "," + puck.rigidbody2D.position.y.ToString () + "," +
 					puck.rigidbody2D.velocity.x.ToString () + "," + puck.rigidbody2D.velocity.y.ToString () + "," +
 					puck.rigidbody2D.angularVelocity.ToString () + ",";
@@ -53,7 +56,7 @@ public class CommunicationController : MonoBehaviour {
 			string msg = agentData + puckData + reward;	// agentX, agentY, agentVx, agentVy, puckX, puckY, puckVx, puckVy, puckR
 
 			// send information to agent
-			Send (connection, msg);
+			Send (connection, msg);*/
 		}
 	}
 
@@ -62,14 +65,18 @@ public class CommunicationController : MonoBehaviour {
 		Socket listener = (Socket)ar.AsyncState;
 		Socket handler = listener.EndAccept(ar);
 
-		// Signal the main thread to continue.
-		//allDone.Set();
+		try {
+			// Create the state object.
+			StateObject state = new StateObject();
+			state.workSocket = handler;
+			handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
 
-		// Create the state object.
-		StateObject state = new StateObject();
-		state.workSocket = handler;
-		handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
-		
+			// notify game manager an agents has connected
+			gameManager.UpdateState (TrainerState.Idle);
+		}
+		catch {
+			Debug.Log("Error listenning to incoming connection");
+		}
 	}
 	
 	private void ReadCallback(IAsyncResult ar) {
@@ -80,26 +87,42 @@ public class CommunicationController : MonoBehaviour {
 		StateObject state = (StateObject)ar.AsyncState;
 		Socket handler = state.workSocket;
 
-		// Read data from the client socket. 
-		int bytesRead = handler.EndReceive(ar);
+		if (handler.Connected) {
+			// Read data from the client socket. 
+			int bytesRead = handler.EndReceive (ar);
 
-		if (bytesRead > 0) {
-			// store the data received so far.
-			state.sb.Append(Encoding.ASCII.GetString(state.buffer, 0, bytesRead));
+			// send action to agent
+			//agent.
+
+			// Continue listenning
+			handler.BeginReceive (state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback (ReadCallback), state);
 		}
-		
-		// Continue listenning
-		handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-		                     new AsyncCallback(ReadCallback), state);
 	}
 	
 	public void Send(Socket handler, String data) {
 		// Convert the string data to byte data using ASCII encoding.
 		byte[] byteData = Encoding.ASCII.GetBytes(data);
 
-		// Begin sending the data to the remote device.
-		handler.BeginSend(byteData, 0, byteData.Length, 0,
-		                  new AsyncCallback(SendCallback), handler);
+		try {
+			// Begin sending the data to the remote device.
+			handler.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), handler);
+		}
+		catch {
+			Debug.Log("Dropped connection");
+		}
+	}
+
+	public void Send(String data) {
+		// Convert the string data to byte data using ASCII encoding.
+		byte[] byteData = Encoding.ASCII.GetBytes(data);
+		
+		try {
+			// Begin sending the data to the remote device.
+			this.connection.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), this.connection);
+		}
+		catch {
+			Debug.Log("Dropped connection");
+		}
 	}
 	
 	private void SendCallback(IAsyncResult ar) {
@@ -107,17 +130,58 @@ public class CommunicationController : MonoBehaviour {
 			// Retrieve the socket from the state object.
 			Socket handler = (Socket)ar.AsyncState;
 
-			// Complete sending the data to the remote device.
-			int bytesSent = handler.EndSend(ar);
-			Debug.Log("Sent " + bytesSent.ToString() + " bytes to client.");
+			if (handler.Connected) {
+				// Complete sending the data to the remote device.
+				int bytesSent = handler.EndSend(ar);
+				Debug.Log("Sent " + bytesSent.ToString() + " bytes to client.");
+			}
 		}
 		catch (Exception e) {
 			Debug.Log(e.ToString());
 		}
 	}
 
-	public void ShutDown() {
-		//
+	/// <summary>
+	/// Shuts down.
+	/// </summary>
+	/// <param name="onlyListen">If set to <c>true</c> only listen.</param>
+	public void ShutDown(bool onlyListen) {
+		try {
+		if (onlyListen == false) {
+			connection.Shutdown (SocketShutdown.Both);
+			connection.Close ();
+		}
+		}
+		catch {
+			Debug.Log("Error shutting down connection on the server side");
+		}
+
+		// relisten for incomming connections
+		IPAddress IpAddress = IPAddress.Loopback;
+		IPEndPoint localendPoint = new IPEndPoint (IpAddress, port);
+		connection = new Socket (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+		try {
+			connection.Bind(localendPoint);
+			connection.Listen(100);
+			connection.BeginAccept(new AsyncCallback(AcceptCallback), connection);
+		}
+		catch (Exception) {
+			Debug.Log("Couldn't setup the TCP listner");
+		}
+	}
+
+	/// <summary>
+	/// Determines whether this instance is connected the specified socket.
+	/// </summary>
+	/// <returns><c>true</c> if this instance is connected the specified socket; otherwise, <c>false</c>.</returns>
+	/// <param name="socket">Socket.</param>
+	private bool IsConnected(Socket socket) {
+		try {
+			return !(socket.Poll(1,SelectMode.SelectRead) && socket.Available == 0);
+		}
+		catch (SocketException) {
+			return false;
+		}
 	}
 
 }

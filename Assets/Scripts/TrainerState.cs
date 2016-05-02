@@ -5,11 +5,11 @@ public enum TrainerState {
 	// neural agent is not connected
 	Disconnected,
 	// neural agent is being trained
-	Trainning,
+	Training,
 	// init new episode, this is a transition state
 	Init,
 	// idle training - between episodes
-	IdleTrainning,
+	IdleTraining,
 	// idle state.
 	Idle
 }
