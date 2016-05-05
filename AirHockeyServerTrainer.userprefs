@@ -1,20 +1,20 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Scripts\GameController.cs">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Scripts\AgentController.cs">
     <Files>
-      <File FileName="Assets\Scripts\CommunicationController.cs" Line="43" Column="55" />
-      <File FileName="Assets\Scripts\RewardManager.cs" Line="1" Column="1" />
-      <File FileName="Assets\Scripts\GameController.cs" Line="35" Column="27" />
-      <File FileName="Assets\Scripts\AgentController.cs" Line="31" Column="49" />
-      <File FileName="Assets\Scripts\PuckController.cs" Line="29" Column="49" />
-      <File FileName="Assets\Scripts\TrainerState.cs" Line="8" Column="7" />
+      <File FileName="Assets\Scripts\GameController.cs" Line="29" Column="5" />
+      <File FileName="Assets\Scripts\CommunicationController.cs" Line="92" Column="1" />
+      <File FileName="Assets\Scripts\RewardManager.cs" Line="17" Column="12" />
+      <File FileName="Assets\Scripts\AgentController.cs" Line="41" Column="23" />
+      <File FileName="Assets\Scripts\PuckController.cs" Line="57" Column="3" />
+      <File FileName="Assets\Scripts\TrainerState.cs" Line="1" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="Assembly-CSharp" expanded="True">
             <Node name="Scripts" expanded="True">
-              <Node name="GameController.cs" selected="True" />
+              <Node name="AgentController.cs" selected="True" />
             </Node>
           </Node>
         </State>
