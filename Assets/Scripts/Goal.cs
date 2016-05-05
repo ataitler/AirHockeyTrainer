@@ -5,6 +5,7 @@ public class Goal : MonoBehaviour {
 
 	private GameController gameController;
 	private PuckController puckController;
+	private RewardManager rewardManager;
 
 	// Use this for initialization
 	void Start () {
@@ -28,12 +29,27 @@ public class Goal : MonoBehaviour {
 		{
 			Debug.Log("Cannot find 'PuckController' script");
 		}
+
+		// find the reward manager
+		GameObject RewardManagerObject = GameObject.FindWithTag ("RewardManager");
+		if (RewardManagerObject != null) {
+			rewardManager = RewardManagerObject.GetComponent<RewardManager>();
+		}
+		if (rewardManager == null) { 
+			Debug.Log("Cannot find 'RewardManager' script");
+		}
 	}
 
 	void OnTriggerEnter2D(Collider2D other) {
+		Debug.Log (this.tag);
 		if (other.tag == "Puck"){
-			// determine which goal is it
-			// inform rewarder and end episode
+			if (this.CompareTag("AgentGoal")) {
+				rewardManager.SelfGoal();							// we got a goal, BAD!
+			}
+			else {
+				rewardManager.ScoredGoal();							// we scored!
+			}
+			gameController.UpdateState(TrainerState.IdleTraining);
 		}
 	}
 

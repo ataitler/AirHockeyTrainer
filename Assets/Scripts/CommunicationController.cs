@@ -5,12 +5,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Collections;
 using System.Threading;
+using System.Text.RegularExpressions;
 
 public class CommunicationController : MonoBehaviour {
 
-	// Thread signal.
-	private static ManualResetEvent allDone = new ManualResetEvent(false);
 	private Socket connection;
+	private bool connected;
 	
 	public AgentController agent;
 	public PuckController puck;
@@ -21,17 +21,18 @@ public class CommunicationController : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		// init socker parameters
+		connected = false;
 		IPAddress IpAddress = IPAddress.Loopback;
 		IPEndPoint localendPoint = new IPEndPoint (IpAddress, port);
 
 		// create a TCP socket
-		connection = new Socket (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+		Socket listener = new Socket (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
 		// bind the socket to the end point and listen for incoming connections
 		try {
-			connection.Bind(localendPoint);
-			connection.Listen(100);
-			connection.BeginAccept(new AsyncCallback(AcceptCallback), connection);
+			listener.Bind(localendPoint);
+			listener.Listen(100);
+			listener.BeginAccept(new AsyncCallback(AcceptCallback), listener);
 		}
 		catch (Exception) {
 			Debug.Log("Couldn't setup the TCP listner");
@@ -39,37 +40,26 @@ public class CommunicationController : MonoBehaviour {
 	}
 
 	void FixedUpdate () {
-		if (IsConnected(connection)) {
+		if (connection != null && !IsConnected(connection) && connected) {
 			gameManager.UpdateState(TrainerState.Disconnected);
-		}
-
-
-		if (gameManager.State == TrainerState.Training) {
-
-			/*string reward = rewardManager.GetReward ().ToString ();
-			string puckData = puck.rigidbody2D.position.x.ToString () + "," + puck.rigidbody2D.position.y.ToString () + "," +
-					puck.rigidbody2D.velocity.x.ToString () + "," + puck.rigidbody2D.velocity.y.ToString () + "," +
-					puck.rigidbody2D.angularVelocity.ToString () + ",";
-			string agentData = agent.rigidbody2D.position.x.ToString () + "," + agent.rigidbody2D.position.y.ToString () + "," +
-					agent.rigidbody2D.velocity.x.ToString () + "," + agent.rigidbody2D.velocity.y.ToString () + ",";
-
-			string msg = agentData + puckData + reward;	// agentX, agentY, agentVx, agentVy, puckX, puckY, puckVx, puckVy, puckR
-
-			// send information to agent
-			Send (connection, msg);*/
+			connected = false;
 		}
 	}
 
 	private void AcceptCallback(IAsyncResult ar) {
 		// Get the socket that handles the client request.
 		Socket listener = (Socket)ar.AsyncState;
-		Socket handler = listener.EndAccept(ar);
+		//Socket handler = listener.EndAccept(ar);
+		connection = listener.EndAccept(ar);
+		connected = true;
 
 		try {
 			// Create the state object.
 			StateObject state = new StateObject();
-			state.workSocket = handler;
-			handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
+			//state.workSocket = handler;
+			state.workSocket = connection;
+			//handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
+			connection.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
 
 			// notify game manager an agents has connected
 			gameManager.UpdateState (TrainerState.Idle);
@@ -80,8 +70,6 @@ public class CommunicationController : MonoBehaviour {
 	}
 	
 	private void ReadCallback(IAsyncResult ar) {
-		String content = String.Empty;
-
 		// Retrieve the state object and the handler socket
 		// from the asynchronous state object.
 		StateObject state = (StateObject)ar.AsyncState;
@@ -90,10 +78,16 @@ public class CommunicationController : MonoBehaviour {
 		if (handler.Connected) {
 			// Read data from the client socket. 
 			int bytesRead = handler.EndReceive (ar);
+			string msg = Encoding.ASCII.GetString(state.buffer,0,bytesRead);
 
 			// send action to agent
-			//agent.
-
+			string pattern = @"(\-?\d+),(\-?\d+)";
+			Match m = Regex.Match(msg, pattern);
+			if (m.Success) {
+				float ax = float.Parse(m.Groups[1].Value);
+				float ay = float.Parse(m.Groups[2].Value);
+				agent.SetAction(ax,ay);
+			}
 			// Continue listenning
 			handler.BeginReceive (state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback (ReadCallback), state);
 		}
@@ -121,7 +115,7 @@ public class CommunicationController : MonoBehaviour {
 			this.connection.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), this.connection);
 		}
 		catch {
-			Debug.Log("Dropped connection");
+			Debug.Log("Dropped connection in Send");
 		}
 	}
 	
@@ -177,7 +171,8 @@ public class CommunicationController : MonoBehaviour {
 	/// <param name="socket">Socket.</param>
 	private bool IsConnected(Socket socket) {
 		try {
-			return !(socket.Poll(1,SelectMode.SelectRead) && socket.Available == 0);
+			//return !(socket.Poll(1,SelectMode.SelectRead) && socket.Available == 0);
+			return socket.Connected;
 		}
 		catch (SocketException) {
 			return false;

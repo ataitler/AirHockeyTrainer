@@ -36,14 +36,26 @@ public class WallHit : MonoBehaviour {
 		}
 	}
 
-	void OnCollisionEnter2D(Collision2D coll) {
-		if (coll.gameObject.tag == "Agent") {
-			//need to inform the rewarder and end episode.
-			return;
+	void OnTriggerEnter2D(Collider2D other) {
+		if (other.CompareTag("Agent")) {		// one of the constrains was violated
+			rewardManager.AgentConstrainViolation();
+			gameController.UpdateState(TrainerState.IdleTraining);
 		}
-		if (coll.gameObject.tag == "Puck") {
-			// determind which collider trigered the event
-			// recored data with the rewarder
+		else if (other.CompareTag("Puck")) {
+			if (this.CompareTag("RightWall")) {
+				rewardManager.RightWallHit();
+			}
+			else if (this.CompareTag("LeftWall")) {
+				rewardManager.LeftWallHit();
+			}
+			else if (this.CompareTag("AgentWall")) {
+				rewardManager.AgentWallHit();
+				gameController.UpdateState(TrainerState.IdleTraining);
+			}
+			else if (this.CompareTag("OppWall")) {
+				rewardManager.OppWallHit();
+				gameController.UpdateState(TrainerState.IdleTraining);
+			}
 		}
 	}
 
