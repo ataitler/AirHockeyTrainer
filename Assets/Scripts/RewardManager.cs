@@ -4,7 +4,7 @@ using System.Collections;
 public class RewardManager : MonoBehaviour {
 
 	private bool isPuckAgentHit;
-	private bool isConstrainViolatied;
+	private bool isConstrainViolated;
 	private bool isSelfGoal;
 	private bool isScoredGoal;
 	private bool isTimeout;
@@ -16,7 +16,7 @@ public class RewardManager : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		isPuckAgentHit = false;
-		isConstrainViolatied = false;
+		isConstrainViolated = false;
 		isSelfGoal = false;
 		isScoredGoal = false;
 		isTimeout = false;
@@ -27,7 +27,8 @@ public class RewardManager : MonoBehaviour {
 	}
 	
 	public double GetReward() {
-		double reward = 0;
+		double reward = CalculateReward ();
+		Reset ();
 		// reward formula...
 		return reward;
 	}
@@ -57,7 +58,7 @@ public class RewardManager : MonoBehaviour {
 	}
 
 	public void AgentConstrainViolation() {
-		isConstrainViolatied = true;
+		isConstrainViolated = true;
 	}
 
 	public void AgentPuckCollision() {
@@ -70,7 +71,7 @@ public class RewardManager : MonoBehaviour {
 
 	public void Reset() {
 		isPuckAgentHit = false;
-		isConstrainViolatied = false;
+		isConstrainViolated = false;
 		isSelfGoal = false;
 		isScoredGoal = false;
 		isTimeout = false;
@@ -80,4 +81,42 @@ public class RewardManager : MonoBehaviour {
 		leftWallHits = 0;
 	}
 
+	private double CalculateReward()
+	{
+		double reward = 0;
+
+		if (isPuckAgentHit == false)
+		{
+			reward -= 1;
+		} 
+		if (isConstrainViolated)
+		{
+			reward -=1;
+		}
+		if ((isAgentWallHit) || (rightWallHits>0) || (leftWallHits>0))
+		{
+			reward -= 10;
+		}
+		if (isTimeout)
+		{
+			reward -= 1;
+		}
+		if (isSelfGoal)
+		{
+			reward -= 100;
+		}
+		if (isScoredGoal)
+		{
+			reward += 100;
+		}
+		if (isPuckAgentHit){
+			reward += 50;
+		}
+		if (isOppWallHit)
+		{
+			reward -= 5;
+		}
+
+		return reward;
+	}
 }

@@ -7,10 +7,12 @@ public class GameController : MonoBehaviour {
 	public CommunicationController communication;
 	public PuckController puck;
 	public AgentController agent;
+	public GUIText IterationLabel;
 	public Action action;
 	public bool trainingDelay;
 	public float Timer;
 	private float _Timer;
+	private long iterNum;
 
 	private float maxSpeed;
 
@@ -30,16 +32,17 @@ public class GameController : MonoBehaviour {
 		Random.seed = 42;
 		maxSpeed = puck.GetMaxSpeed;
 		_Timer = Timer;
+		iterNum = 0;
 	}
 
 	// FixedUpdate is called once every physical time step
 	void FixedUpdate () {
 		if (state == TrainerState.Training) {
-			string puckData = puck.rigidbody2D.position.x.ToString () + "," + puck.rigidbody2D.position.y.ToString () + "," +
-							  puck.rigidbody2D.velocity.x.ToString () + "," + puck.rigidbody2D.velocity.y.ToString () + "," +
-							  puck.rigidbody2D.angularVelocity.ToString ();
-			string agentData = agent.rigidbody2D.position.x.ToString () + "," + agent.rigidbody2D.position.y.ToString () + "," +
-						       agent.rigidbody2D.velocity.x.ToString () + "," + agent.rigidbody2D.velocity.y.ToString ();
+			string puckData = puck.rigidbody2D.position.x.ToString ("F3") + "," + puck.rigidbody2D.position.y.ToString ("F3") + "," +
+					puck.rigidbody2D.velocity.x.ToString ("F3") + "," + puck.rigidbody2D.velocity.y.ToString ("F3") + "," +
+					puck.rigidbody2D.angularVelocity.ToString ("F3");
+			string agentData = agent.rigidbody2D.position.x.ToString ("F3") + "," + agent.rigidbody2D.position.y.ToString ("F3") + "," +
+				agent.rigidbody2D.velocity.x.ToString ("F3") + "," + agent.rigidbody2D.velocity.y.ToString ("F3");
 			
 			string msg = "<Message>:" + agentData + "," + puckData;	// agentX, agentY, agentVx, agentVy, puckX, puckY, puckVx, puckVy, puckR
 			communication.Send(msg);
@@ -62,16 +65,14 @@ public class GameController : MonoBehaviour {
 				trainingDelay = false;
 
 				_Timer = Timer;
+
+				IterationLabel.text = "Iteration Number: " + iterNum.ToString();
 			}
 			else {
 				UpdateState(TrainerState.Training);
 				trainingDelay = true;
+				iterNum++;
 			}
-		}
-		else if (state == TrainerState.Idle)
-		{
-			//agent.Reset();
-			//puck.Reset(0,0,0,0,0);
 		}
 	}
 	
@@ -131,7 +132,7 @@ public class GameController : MonoBehaviour {
 				Debug.Log("IdleTraining state");
 				if (state == TrainerState.Training) {
 					// send reward
-					communication.Send("<Reward>: " + reward.GetReward().ToString());
+					communication.Send("<Reward>:" + reward.GetReward().ToString());
 					reward.Reset();
 				}
 				break;
